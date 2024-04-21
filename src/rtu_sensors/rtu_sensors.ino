@@ -41,7 +41,7 @@ void readIlumination() {
 
 // Control LCD:
 
-static const uint8_t LCD_D7_0_PIN[8] = {2, 3, 4, 5, 6, 7, 8, 9};
+static const uint8_t LCD_D7_0_PIN[8] = {9, 8, 7, 6, 5, 4, 3, 2};
 static const uint8_t LCD_E_PIN = 10;
 static const uint8_t LCD_RW_PIN = 12;
 static const uint8_t LCD_RS_PIN = 11;
@@ -51,14 +51,12 @@ static const uint8_t LCD_RS_PIN = 11;
 unsigned long millis_lcd = 0;
 
 uint8_t sendCommand(uint8_t bit_rs, uint8_t bit_rw, uint8_t dataWrite, bool check_bf) {
+  // Instead of waiting 40us, check BF bool:
   int timeout = 60;
-  uint8_t data_bf = B00000000;
+  uint8_t data_bf;
   while (check_bf && timeout > 0) {
-    Serial.println("Boolean BF: ");
     data_bf = sendCommand(0, 1, B10000000, false);
-    Serial.print(data_bf, BIN);
     check_bf = (data_bf >> 7) & 1;
-    Serial.print(check_bf, DEC);
     timeout--;
   }
 
@@ -75,16 +73,14 @@ uint8_t sendCommand(uint8_t bit_rs, uint8_t bit_rw, uint8_t dataWrite, bool chec
   digitalWrite(LCD_E_PIN, 1);
 
   uint8_t dataRead = B00000000;
-  for (int i = 0; i <= 7; i++) {
-    if (bit_rw == 1) {
-      dataRead = (dataRead | digitalRead(LCD_D7_0_PIN[i])) << 1;
-    }
+  if (bit_rw == 1) {
+    for (int i = 0; i <= 7; i++) {
+        dataRead = (dataRead | digitalRead(LCD_D7_0_PIN[i])) << 1;
+      }
   }
 
-  delayMicroseconds(1);
   digitalWrite(LCD_E_PIN, 0);
 
-  delayMicroseconds(40);
   return dataRead;
 }
 
@@ -95,7 +91,7 @@ void writeLcd() {
   pinMode(LCD_RS_PIN, OUTPUT);
   pinMode(LCD_RW_PIN, OUTPUT);
 
-  Serial.println("Start init secuence");
+  Serial.println("\n\nStart init secuence");
   delayMicroseconds(15000);
   sendCommand(0, 0, B00110000, false);
   delayMicroseconds(4100);
@@ -105,25 +101,36 @@ void writeLcd() {
 
   Serial.println("Set 8 bit interface");
   sendCommand(0, 0, B00110000, true);
-  Serial.println("Function set (display lines and character font)");
-  sendCommand(0, 0, B00100000, true);
-  Serial.println("Display off");
+  Serial.println("\n\Function set (display lines and character font)");
+  sendCommand(0, 0, B00111000, true);
+  Serial.println("\n\Display off");
   sendCommand(0, 0, B00001000, true);
-  Serial.println("Display clear");
+  Serial.println("\n\Display clear");
   sendCommand(0, 0, B00000001, true);
-  delayMicroseconds(1640);
-  Serial.println("Mode set:");
-  sendCommand(0, 0, B00000111, true);
+  Serial.println("\n\Mode set:");
+  sendCommand(0, 0, B00000110, true);
   
-  Serial.println("LCD initialized");
+  Serial.println("\n\LCD initialized");
 
   // Display on:
-  delay(100);
-  sendCommand(0, 0, B00001111, true);
+  sendCommand(0, 0, B00001100, true);
 
-  delay(100);
-  sendCommand(1, 0, B0011000, true);
-
+  // LUCIA
+  delay(1000);
+  sendCommand(1, 0, B01001100, true);
+  
+  delay(1000);
+  sendCommand(1, 0, B01010101, true);  
+  
+  delay(1000);
+  sendCommand(1, 0, B01000011, true);
+  
+  delay(1000);
+  sendCommand(1, 0, B01001001, true);
+  
+  delay(1000);
+  sendCommand(1, 0, B01000001, true);
+  
   //switch (lcd_state) {
 
   //  case LCD_INITIALIZATION:
