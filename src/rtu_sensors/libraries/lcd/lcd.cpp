@@ -18,7 +18,7 @@ LCD::LCD(uint8_t rs_pin, uint8_t rw_pin, uint8_t e_pin, uint8_t* d7_0_pin)
 }
 
 
-uint8_t LCD::_send_command(
+uint8_t LCD::_sendCommand(
   uint8_t rs_bit,
   uint8_t rw_bit,
   uint8_t d7_0_bit,
@@ -29,11 +29,10 @@ uint8_t LCD::_send_command(
   int timeout = 60;
   uint8_t data_bf = B00000000;
   while (wait_busy && timeout > 0) {
-    data_bf = this->_send_command(0, 1, B10000000, false);
+    data_bf = this->_sendCommand(0, 1, B10000000, false);
     wait_busy = (data_bf >> 7) & 1;
     timeout--;
   }
-  Serial.println(d7_0_bit, BIN);
 
   for (int i = 0; i <= 7; i++) {
     pinMode(_d7_0_pin[7 - i], !rw_bit);
@@ -60,13 +59,13 @@ uint8_t LCD::_send_command(
 }
 
 
-void LCD::function_set(bool data_bits, bool display_lines, bool style)
+void LCD::functionSet(bool data_bits, bool display_lines, bool style)
 {
   uint8_t data_command = B00100000;
   data_command |= (data_bits << 4);
   data_command |= (display_lines << 3);
   data_command |= (style << 2);
-  this->_send_command(0, 0, data_command, true);
+  this->_sendCommand(0, 0, data_command, true);
 }
 
 
@@ -75,50 +74,66 @@ void LCD::shift(bool shift_type, bool shift_direction)
   uint8_t data_command = B00010000;
   data_command |= (shift_type << 3);
   data_command |= (shift_direction << 2);
-  this->_send_command(0, 0, data_command, true);
+  this->_sendCommand(0, 0, data_command, true);
 }
 
 
-void LCD::display_switch(bool turn_on, bool cursor_on, bool blink_on)
+void LCD::displaySwitch(bool turn_on, bool cursor_on, bool blink_on)
 {
   uint8_t data_command = B00001000;
   data_command |= (turn_on << 2);
   data_command |= (cursor_on << 1);
   data_command |= blink_on;
-  this->_send_command(0, 0, data_command, true);
+  this->_sendCommand(0, 0, data_command, true);
 }
 
 
-void LCD::input_set(bool cursor_direction, bool shift)
+void LCD::inputSet(bool cursor_direction, bool shift)
 {
   uint8_t data_command = B00000100;
   data_command |= (cursor_direction << 1);
   data_command |= shift;
-  this->_send_command(0, 0, data_command, true);
+  this->_sendCommand(0, 0, data_command, true);
 }
 
 
-void LCD::cursor_return()
+void LCD::cursorReturn()
 {
-  this->_send_command(0, 0, B00000010, true);
+  this->_sendCommand(0, 0, B00000010, true);
 }
 
 
-void LCD::screen_clear()
+void LCD::setCursor(uint8_t row, uint8_t column)
 {
-  this->_send_command(0, 0, B00000001, true);
+  uint8_t address = B10000000 | (row * 16 + column);
+  this->_sendCommand(0, 0, address, true);
 }
 
 
-void LCD::write_character(uint8_t d7_0_bit)
+void LCD::screenClear()
 {
-  this->_send_command(1, 0, d7_0_bit, true);
+  this->_sendCommand(0, 0, B00000001, true);
 }
 
 
-uint8_t LCD::send_command(uint8_t rs_bit, uint8_t rw_bit, uint8_t d7_0_bit)
+void LCD::writeCharacter(uint8_t d7_0_bit)
 {
-  return this->_send_command(rs_bit, rw_bit, d7_0_bit, true);
+  this->_sendCommand(1, 0, d7_0_bit, true);
+}
+
+
+void LCD::writeString(char *str)
+{
+  while (*str != '\0') {
+      this->writeCharacter(*str);
+      str++;
+  }
+}
+
+
+uint8_t LCD::sendCommand(uint8_t rs_bit, uint8_t rw_bit, uint8_t d7_0_bit)
+{
+  return this->_sendCommand(rs_bit, rw_bit, d7_0_bit, true);
 }
 
 
@@ -133,22 +148,22 @@ void LCD::initialize(
   // Init LCD:
 
   delayMicroseconds(15000);
-  this->_send_command(0, 0, B00110000, false);
+  this->_sendCommand(0, 0, B00110000, false);
   delayMicroseconds(4100);
-  this->_send_command(0, 0, B00110000, false);
+  this->_sendCommand(0, 0, B00110000, false);
   delayMicroseconds(100);
-  this->_send_command(0, 0, B00110000, false);
+  this->_sendCommand(0, 0, B00110000, false);
 
   // Set bits interface:
-  this->function_set(data_bits, false, false);
+  this->functionSet(data_bits, false, false);
   // Function set (display lines and character font):
-  this->function_set(data_bits, display_lines, style);
+  this->functionSet(data_bits, display_lines, style);
   // Display off:
-  this->display_switch(false, false, false);
+  this->displaySwitch(false, false, false);
   // Display clear:
-  this->screen_clear();
+  this->screenClear();
   delayMicroseconds(1640);
   // Mode set:
-  this->input_set(cursor_direction, shift);
+  this->inputSet(cursor_direction, shift);
 }
 

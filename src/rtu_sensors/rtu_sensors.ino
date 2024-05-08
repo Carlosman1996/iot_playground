@@ -1,9 +1,9 @@
 #include <math.h>
+#include <stdio.h>
 
 #include <ntc.h>
 #include <ldr.h>
 #include <lcd.h>
-
 
 
 // Temperature sensor (NTC):
@@ -16,12 +16,13 @@ unsigned long millis_temperature = INTERVAL_TEMPERATURE_MS;
 
 NTC ntc_sensor( NTC_PIN, NTC_RC, NTC_VCC );
 
-void readTemperature() {
+float readTemperature() {
   float celsius = ntc_sensor.read_temperature();
 
   Serial.print("Temperature = ");
   Serial.print(celsius, 2);
   Serial.println(" ºC");
+  return celsius;
 }
 
 // Ilumination sensor (LDR):
@@ -53,18 +54,31 @@ unsigned long millis_lcd = 0;
 
 LCD lcd_display(LCD_RS_PIN, LCD_RW_PIN, LCD_E_PIN, LCD_D7_0_PIN);
 
-void writeLcd() {
+void initializeLcd() {
   lcd_display.initialize(true, true, false, true, false);
 
   // Display on:
-  lcd_display.display_switch(true, false, false);
+  lcd_display.displaySwitch(true, false, false);
+}
 
-  // LUCIA
-  lcd_display.write_character(B01001100);
-  lcd_display.write_character(B01010101);
-  lcd_display.write_character(B01000011);
-  lcd_display.write_character(B01001001);
-  lcd_display.write_character(B01000001);
+
+void writeTempLcd(float temperature) {
+  char tempStr[20];
+  dtostrf(temperature, 7, 2, tempStr);
+  // Remove leading blank spaces:
+  int i;
+  for (i = 0; i < strlen(tempStr); i++) {
+    if (tempStr[i] != ' ' && tempStr[i] != '0') {
+      break;
+    }
+  }
+  if (i > 0) {
+    strcpy(tempStr, tempStr + i);
+  }
+
+  lcd_display.setCursor(0, 0);
+  lcd_display.writeString("Temp: ");
+  lcd_display.writeString(tempStr);
 }
 
 
@@ -80,13 +94,14 @@ void loop()
   // LCD stage:
   if (millis_lcd == 0) {
     millis_lcd = millis();
-    writeLcd();
+    initializeLcd();
   }
 
   // Temperature stage:
   if (millis() - millis_temperature >= INTERVAL_TEMPERATURE_MS) {
     millis_temperature = millis();
-    readTemperature();
+    float temperature = readTemperature();
+    writeTempLcd(temperature);
   }
 
   // Ilumination stage:
